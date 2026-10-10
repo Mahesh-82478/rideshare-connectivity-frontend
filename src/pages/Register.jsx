@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./Register.css";
 
 function Register() {
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     name: "",
     email: "",
     phone: "",
@@ -11,8 +11,9 @@ function Register() {
     vehicleNumber: "",
     vehicleType: "",
     vehicleSeats: ""
-  });
+  };
 
+  const [formData, setFormData] = useState(initialFormData);
   const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
@@ -24,66 +25,63 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setMessage("Registering...");
+
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      return;
+    }
+
+    const requestData = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password,
+      role: formData.role,
+      vehicleNumber:
+        formData.role === "DRIVER"
+          ? formData.vehicleNumber
+          : null,
+      vehicleType:
+        formData.role === "DRIVER"
+          ? formData.vehicleType
+          : null,
+      vehicleSeats:
+        formData.role === "DRIVER"
+          ? Number(formData.vehicleSeats)
+          : null
+    };
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/users/register",
+        `${API_URL}/api/users/register`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            password: formData.password,
-            role: formData.role,
-            vehicleNumber:
-              formData.role === "DRIVER"
-                ? formData.vehicleNumber
-                : null,
-            vehicleType:
-              formData.role === "DRIVER"
-                ? formData.vehicleType
-                : null,
-            vehicleSeats:
-              formData.role === "DRIVER"
-                ? Number(formData.vehicleSeats)
-                : null
-          })
+          body: JSON.stringify(requestData)
         }
       );
 
       if (response.ok) {
         setMessage("Registration successful!");
-
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          password: "",
-          role: "PASSENGER",
-          vehicleNumber: "",
-          vehicleType: "",
-          vehicleSeats: ""
-        });
+        setFormData(initialFormData);
       } else {
         const errorText = await response.text();
         setMessage(errorText || "Registration failed.");
       }
     } catch (error) {
+      console.error("Registration error:", error);
       setMessage("Cannot connect to the backend.");
     }
   };
 
   return (
     <div className="register-page">
-
       <div className="register-card">
-
         <h1>Create Account</h1>
 
         <p className="register-subtitle">
@@ -91,7 +89,6 @@ function Register() {
         </p>
 
         <form onSubmit={handleSubmit}>
-
           <label>Name</label>
           <input
             type="text"
@@ -133,7 +130,6 @@ function Register() {
           />
 
           <label>Choose Role</label>
-
           <select
             name="role"
             value={formData.role}
@@ -145,7 +141,6 @@ function Register() {
 
           {formData.role === "DRIVER" && (
             <div className="driver-fields">
-
               <label>Vehicle Number</label>
               <input
                 type="text"
@@ -176,7 +171,6 @@ function Register() {
                 onChange={handleChange}
                 required
               />
-
             </div>
           )}
 
@@ -186,17 +180,12 @@ function Register() {
           >
             Register
           </button>
-
         </form>
 
         {message && (
-          <p className="register-message">
-            {message}
-          </p>
+          <p className="register-message">{message}</p>
         )}
-
       </div>
-
     </div>
   );
 }

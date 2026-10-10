@@ -27,24 +27,39 @@ export default function Bookings() {
       return;
     }
 
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    if (!API_URL) {
+      setError("Backend URL is not configured.");
+      return;
+    }
+
     Promise.all([
-      fetch("http://localhost:8080/api/bookings").then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      }),
-      fetch("http://localhost:8080/api/rides").then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      }),
+      fetch(`${API_URL}/api/bookings`),
+      fetch(`${API_URL}/api/rides`)
     ])
-      .then(([allBookings, rideData]) => {
+      .then(async ([bookingResponse, rideResponse]) => {
+        if (!bookingResponse.ok || !rideResponse.ok) {
+          throw new Error("Failed to load booking data.");
+        }
+
+        const allBookings = await bookingResponse.json();
+        const rideData = await rideResponse.json();
+
         setBookings(
-          allBookings
+          allBookings.filter(
+            (booking) =>
+              Number(booking.passengerId) === Number(user.id)
+          )
         );
+
         setRides(rideData);
       })
-      .catch(() => {
-        setError("Unable to load bookings. Please check the backend.");
+      .catch((error) => {
+        console.error("Bookings error:", error);
+        setError(
+          "Unable to load bookings. Please check the backend."
+        );
       });
   }, []);
 
@@ -71,7 +86,7 @@ export default function Bookings() {
               border: "1px solid #ddd",
               borderRadius: 10,
               padding: 16,
-              marginBottom: 12,
+              marginBottom: 12
             }}
           >
             <h3>Booking #{booking.id}</h3>
@@ -89,6 +104,7 @@ export default function Bookings() {
             )}
 
             <p><strong>Status:</strong> {booking.status}</p>
+
             <p>
               <strong>Booking time:</strong>{" "}
               {booking.bookingTime

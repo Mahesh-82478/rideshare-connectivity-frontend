@@ -1,6 +1,7 @@
-
 import { useEffect, useState } from "react";
 import "./DriverDashboard.css";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 function DriverDashboard() {
   const [formData, setFormData] = useState({
@@ -18,41 +19,57 @@ function DriverDashboard() {
   const [loading, setLoading] = useState(false);
   const [acceptingId, setAcceptingId] = useState(null);
 
-  const user = JSON.parse(
-    localStorage.getItem("rideshareUser") || "null"
-  );
+  let user = null;
+
+  try {
+    user = JSON.parse(
+      localStorage.getItem("rideshareUser") || "null"
+    );
+  } catch {
+    user = null;
+  }
 
   const fetchRides = async () => {
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/rides"
-      );
+      const response = await fetch(`${API_URL}/api/rides`);
 
       if (!response.ok) {
-        throw new Error("Could not load rides");
+        throw new Error("Could not load rides.");
       }
 
       const data = await response.json();
       setRides(data);
-    } catch {
+    } catch (error) {
+      console.error("Fetch rides error:", error);
       setMessage("Could not load rides. Check the backend.");
     }
   };
 
   const fetchRequests = async () => {
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/ride-requests"
-      );
+      const response = await fetch(`${API_URL}/api/ride-requests`);
 
       if (!response.ok) {
-        throw new Error("Could not load requests");
+        throw new Error("Could not load requests.");
       }
 
       const data = await response.json();
       setRequests(data);
-    } catch {
-      setMessage("Could not load passenger requests. Check the backend.");
+    } catch (error) {
+      console.error("Fetch requests error:", error);
+      setMessage(
+        "Could not load passenger requests. Check the backend."
+      );
     }
   };
 
@@ -79,25 +96,28 @@ function DriverDashboard() {
       return;
     }
 
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/rides",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            startLocation: formData.startLocation,
-            destination: formData.destination,
-            rideDate: formData.rideDate,
-            rideTime: formData.rideTime + ":00",
-            availableSeats: Number(formData.availableSeats),
-            vehicleNumber: formData.vehicleNumber,
-            driverId: user.id
-          })
-        }
-      );
+      const response = await fetch(`${API_URL}/api/rides`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          startLocation: formData.startLocation,
+          destination: formData.destination,
+          rideDate: formData.rideDate,
+          rideTime: formData.rideTime + ":00",
+          availableSeats: Number(formData.availableSeats),
+          vehicleNumber: formData.vehicleNumber,
+          driverId: user.id
+        })
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -105,6 +125,7 @@ function DriverDashboard() {
       }
 
       setMessage("Ride offered successfully!");
+
       setFormData({
         startLocation: "",
         destination: "",
@@ -116,6 +137,7 @@ function DriverDashboard() {
 
       await fetchRides();
     } catch (error) {
+      console.error("Offer ride error:", error);
       setMessage(error.message || "Cannot connect to the backend.");
     } finally {
       setLoading(false);
@@ -126,9 +148,15 @@ function DriverDashboard() {
     setAcceptingId(requestId);
     setMessage("");
 
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      setAcceptingId(null);
+      return;
+    }
+
     try {
       const response = await fetch(
-        `http://localhost:8080/api/ride-requests/${requestId}/status?status=ACCEPTED`,
+        `${API_URL}/api/ride-requests/${requestId}/status?status=ACCEPTED`,
         {
           method: "PUT"
         }
@@ -142,6 +170,7 @@ function DriverDashboard() {
       setMessage("Passenger request accepted successfully!");
       await fetchRequests();
     } catch (error) {
+      console.error("Accept request error:", error);
       setMessage(error.message || "Could not accept the request.");
     } finally {
       setAcceptingId(null);
@@ -252,6 +281,7 @@ function DriverDashboard() {
 
           <button
             className="driver-refresh"
+            type="button"
             onClick={() => {
               fetchRides();
               fetchRequests();
@@ -287,6 +317,7 @@ function DriverDashboard() {
                     {String(request.status).toUpperCase() === "PENDING" ? (
                       <button
                         className="offer-submit"
+                        type="button"
                         onClick={() => handleAccept(request.id)}
                         disabled={acceptingId !== null}
                       >

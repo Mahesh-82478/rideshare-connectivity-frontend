@@ -6,7 +6,6 @@ function Login({ onLogin }) {
     email: "",
     password: ""
   });
-
   const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
@@ -18,12 +17,18 @@ function Login({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setMessage("Logging in...");
+
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    if (!API_URL) {
+      setMessage("Backend URL is not configured.");
+      return;
+    }
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/users/login",
+        `${API_URL}/api/users/login`,
         {
           method: "POST",
           headers: {
@@ -36,21 +41,18 @@ function Login({ onLogin }) {
       if (response.ok) {
         const user = await response.json();
 
-        // Save logged-in user
         localStorage.setItem(
           "rideshareUser",
           JSON.stringify(user)
         );
 
         setMessage(
-          `Login successful! Welcome ${user.name}`
+          `Login successful! Welcome ${user.name || user.email}`
         );
 
-        // Send user information to App.jsx
         if (onLogin) {
           onLogin(user);
         }
-
       } else {
         const errorText = await response.text();
 
@@ -58,21 +60,17 @@ function Login({ onLogin }) {
           errorText || "Invalid email or password."
         );
       }
-
     } catch (error) {
-      console.error(error);
-
+      console.error("Login error:", error);
       setMessage(
-        "Cannot connect to the backend."
+        "Cannot connect to the backend. Please try again."
       );
     }
   };
 
   return (
     <div className="login-page">
-
       <div className="login-card">
-
         <h1>Welcome Back</h1>
 
         <p className="login-subtitle">
@@ -80,10 +78,10 @@ function Login({ onLogin }) {
         </p>
 
         <form onSubmit={handleSubmit}>
-
-          <label>Email</label>
+          <label htmlFor="email">Email</label>
 
           <input
+            id="email"
             type="email"
             name="email"
             placeholder="Enter your email"
@@ -92,9 +90,10 @@ function Login({ onLogin }) {
             required
           />
 
-          <label>Password</label>
+          <label htmlFor="password">Password</label>
 
           <input
+            id="password"
             type="password"
             name="password"
             placeholder="Enter your password"
@@ -109,7 +108,6 @@ function Login({ onLogin }) {
           >
             Login
           </button>
-
         </form>
 
         {message && (
@@ -117,9 +115,7 @@ function Login({ onLogin }) {
             {message}
           </p>
         )}
-
       </div>
-
     </div>
   );
 }
